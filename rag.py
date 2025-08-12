@@ -35,6 +35,40 @@ SAMPLE_ROWS_PER_TABLE = 40
 ROW_CHUNK_SIZE = 5
 EXCLUDE_SCHEMAS = {"sys", "INFORMATION_SCHEMA"}  # tune as needed
 # -----------------------------------
+from datetime import date, datetime, time
+from decimal import Decimal
+import numpy as np
+import pandas as pd
+
+def _to_jsonable(v):
+    # Pandas NA
+    if pd.isna(v):
+        return None
+    # Numpy scalars -> python
+    if isinstance(v, (np.integer, np.floating, np.bool_)):
+        return v.item()
+    # Datetime-like -> ISO8601
+    if isinstance(v, (datetime, pd.Timestamp)):
+        return v.isoformat()
+    if isinstance(v, date):
+        return v.isoformat()
+    if isinstance(v, time):
+        return v.isoformat()
+    # Decimals
+    if isinstance(v, Decimal):
+        # choose float or str; float is convenient, str preserves precision
+        try:
+            return float(v)
+        except Exception:
+            return str(v)
+    # Bytes -> hex (or str(v) if you prefer)
+    if isinstance(v, (bytes, bytearray)):
+        return v.hex()
+    # Fallback: keep primitives or stringify
+    if isinstance(v, (int, float, bool, str)) or v is None:
+        return v
+    # Last resort
+    return str(v)
 
 def qual(schema: str, table: str) -> str:
     return f"[{schema}].[{table}]"
